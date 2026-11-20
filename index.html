@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Shape Creator — hand-gesture 3D playground</title>
+<meta name="description" content="Create, scale, move and delete 3D shapes in mid-air using just your hands and a webcam. Runs entirely in your browser." />
+<meta name="theme-color" content="#05060a" />
+<!-- import map must come before any module fetch starts -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
+    "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs"
+  }
+}
+</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2305060a'/%3E%3Cpath d='M16 5 27 16 16 27 5 16Z' fill='none' stroke='%2324f0ff' stroke-width='2'/%3E%3C/svg%3E" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="preconnect" href="https://storage.googleapis.com" crossorigin />
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js" as="script" crossorigin />
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js" crossorigin />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div id="stage">
+  <video id="webcam" autoplay muted playsinline></video>
+  <div id="three-root" aria-hidden="true"></div>
+  <canvas id="overlay" aria-hidden="true"></canvas>
+</div>
+
+<!-- ── HUD ───────────────────────────────────────────────────────── -->
+<header id="hud-top">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.6 21 12l-9 9.4L3 12z"/></svg>
+    </span>
+    <span class="brand-text">Shape&nbsp;Creator</span>
+    <span id="status" class="chip" data-state="idle">idle</span>
+  </div>
+
+  <div class="hud-actions">
+    <button id="btn-help" class="icon-btn" type="button" title="How to play (H)" aria-label="How to play">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.6v.3"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button id="btn-full" class="icon-btn" type="button" title="Fullscreen (F)" aria-label="Fullscreen">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- model download progress -->
+<div id="loadpill" hidden>
+  <div class="bar"><div class="bar-fill" id="loadbar"></div></div>
+  <span id="loadtext">Loading…</span>
+</div>
+
+<!-- optional debug readout -->
+<div id="perf" hidden>
+  <span id="perf-fps">0</span> fps · <span id="perf-inf">0</span> track/s · <span id="perf-shapes">0</span> shapes
+</div>
+
+<!-- trash -->
+<button id="trash" type="button" title="Drop a shape here to delete it" aria-label="Trash">
+  <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h16M9 7V5.2A1.2 1.2 0 0 1 10.2 4h3.6A1.2 1.2 0 0 1 15 5.2V7"/>
+    <path d="M6.2 7l.9 12.1A1.9 1.9 0 0 0 9 21h6a1.9 1.9 0 0 0 1.9-1.9L17.8 7"/>
+    <path d="M10.2 11v6M13.8 11v6"/>
+  </svg>
+</button>
+
+<!-- toolbar -->
+<nav id="toolbar" aria-label="Shape tools">
+  <div class="seg" id="shape-picker" role="group" aria-label="Shape type">
+    <button type="button" data-type="random" class="on" title="Random">✦</button>
+    <button type="button" data-type="box" title="Cube">▢</button>
+    <button type="button" data-type="sphere" title="Sphere">●</button>
+    <button type="button" data-type="cone" title="Cone">▲</button>
+    <button type="button" data-type="torus" title="Torus">◎</button>
+    <button type="button" data-type="octa" title="Octahedron">◆</button>
+  </div>
+  <div class="spacer"></div>
+  <button type="button" id="btn-add" class="ghost-btn" title="Add a shape in the centre (Space)">＋ Add</button>
+  <button type="button" id="btn-clear" class="ghost-btn" title="Delete everything (C)">Clear</button>
+</nav>
+
+<!-- ── loading / permission overlay ─────────────────────────────── -->
+<div id="veil" class="veil">
+  <div class="card">
+    <div class="veil-icon" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round">
+        <path d="M32 6 58 32 32 58 6 32z" opacity=".35"/>
+        <path d="M32 16 48 32 32 48 16 32z"/>
+        <circle cx="32" cy="32" r="3.4" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <h1>Shape Creator</h1>
+    <p class="lede">Pinch your fingers in the air to build 3D shapes, pull them bigger, drop them in the bin.</p>
+
+    <div id="veil-status" class="veil-status">Camera is off</div>
+    <div class="bar" id="veil-bar-wrap" hidden><div class="bar-fill" id="veil-bar"></div></div>
+
+    <div class="veil-actions">
+      <button id="btn-start" class="primary" type="button">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10.2 20 7v10l-5-3.2"/><rect x="3" y="6.5" width="12" height="11" rx="2.4"/></svg>
+        Start with camera
+      </button>
+      <button id="btn-mouse" class="secondary" type="button">Try without camera</button>
+    </div>
+
+    <p class="fineprint">Everything runs on your device — no video ever leaves the browser.</p>
+  </div>
+</div>
+
+<!-- ── help sheet ────────────────────────────────────────────────── -->
+<div id="help" class="veil veil--soft" hidden>
+  <div class="card card--wide">
+    <h2>How to play</h2>
+    <ol class="steps">
+      <li><b>Create</b> — pinch both hands (thumb + index) close together, then pull them apart.</li>
+      <li><b>Resize</b> — while still pinching with both hands, change the distance between them.</li>
+      <li><b>Move</b> — pinch near a shape with one hand and drag it around.</li>
+      <li><b>Delete</b> — drag a shape onto the bin (bottom right) and let go of the pinch.</li>
+    </ol>
+    <p class="fineprint">Keys: <kbd>C</kbd> clear · <kbd>Space</kbd> add · <kbd>F</kbd> fullscreen · <kbd>D</kbd> diagnostics · <kbd>H</kbd> help</p>
+    <p class="fineprint">No webcam? Drag with the mouse / your finger — same rules apply.</p>
+    <button id="btn-help-close" class="primary" type="button">Got it</button>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Shape Creator — hand gesture 3D",
+  "short_name": "Shape Creator",
+  "description": "Build, scale, move and delete 3D shapes with your hands in front of a webcam.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#05060a",
+  "theme_color": "#05060a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMCIgZmlsbD0iIzA1MDYwYSIvPjxwYXRoIGQ9Ik0yNTYgNjQgNDQ4IDI1NiAyNTYgNDQ4IDY0IDI1NloiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI0ZjBmZiIgc3Ryb2tlLXdpZHRoPSIyNCIvPjxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMjQiIGZpbGw9IiNmZjJmYjMiLz48L3N2Zz4=",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
