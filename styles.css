@@ -121,7 +121,30 @@ body.no-camera #webcam { opacity: 0; }
 .chip[data-state="warn"] { color: #2a1400; background: #ffc65c; border-color: transparent; }
 .chip[data-state="loading"] { color: var(--accent); border-color: rgba(36, 240, 255, .35); }
 
-.hud-actions { display: flex; gap: 8px; }
+.hud-actions { display: flex; gap: 8px; align-items: center; }
+
+/* link to the second mode — Spell Caster */
+.spell-link {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 40px; padding: 0 14px 0 11px;
+  border-radius: 999px; text-decoration: none;
+  font: 600 13px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.01em; color: #d9fbff; white-space: nowrap;
+  background: linear-gradient(135deg, rgba(36, 240, 255, 0.16), rgba(255, 47, 179, 0.16));
+  border: 1px solid rgba(120, 230, 255, 0.35);
+  backdrop-filter: blur(10px);
+  transition: background 0.18s, border-color 0.18s, transform 0.18s;
+}
+.spell-link svg { color: #7cf9ff; flex: none; }
+.spell-link:hover { background: linear-gradient(135deg, rgba(36, 240, 255, 0.26), rgba(255, 47, 179, 0.26)); border-color: rgba(160, 240, 255, 0.6); }
+.spell-link:active { transform: scale(0.97); }
+@media (max-width: 560px) {
+  .spell-link { padding: 0; width: 40px; justify-content: center; }
+  .spell-link span { display: none; }
+}
+@media (pointer: coarse) {
+  .spell-link { backdrop-filter: none; }
+}
 
 .icon-btn {
   width: 40px;

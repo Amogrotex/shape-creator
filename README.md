@@ -4,7 +4,9 @@ Open your hand to **build** a shape in mid-air, twist your palm to **rotate** it
 
 A faster, lighter, rewritten take on the classic [Shape Creator demo](https://collidingscopes.github.io/shape-creator-tutorial/) by [@collidingScopes](https://x.com/measure_plan) — same idea, modern stack and a lot less jank.
 
-**Live:** https://amogrotex.github.io/shape-creator/
+And a second mode on the same page and the same hand model: **[⚡ Spell Caster](#-spell-caster)** — draw a Z, a caret or a circle in the air and lightning, fire or a shield answers.
+
+**Live:** https://amogrotex.github.io/shape-creator/ · **Spell Caster:** https://amogrotex.github.io/shape-creator/spell.html
 
 ![Shape Creator preview](preview.png)
 
@@ -54,7 +56,29 @@ Roughly: **~45 % smaller payload on first load** (gzip/brotli CDN + 448 px input
 - **Delete** — drop a shape on the bin (bottom right) and let go.
 - No webcam? Drag with the mouse or your finger — same rules.
 
-Keyboard: `C` clear · `Space` add · `F` fullscreen · `D` diagnostics · `H` help · `Esc` close. The **Camera** button in the toolbar switches from mouse mode to hand tracking at any time.
+Keyboard: `C` clear · `Space` add · `F` fullscreen · `D` diagnostics · `H` help · `Esc` close. The **⚡ Spell Caster** pill in the top bar switches to the game. The **Camera** button in the toolbar switches from mouse mode to hand tracking at any time.
+
+## ⚡ Spell Caster
+
+A tiny hand-drawn spell game that lives in the same site (`spell.html`), on the same page shell, the same MediaPipe model and the same One Euro smoothing — so switching modes costs nothing extra: the model is already cached by the time you get there.
+
+Your hand is the wand. **Draw a glyph in the air**, the stroke is resampled and matched against three templates by a **$1 Unistroke recognizer** (no trained model, ~4 kB of code), and the spell fires where your fingertip stopped. Magenta wisps close in on the crystal core — kill them before they touch it.
+
+![Spell Caster preview](spell-preview.png)
+
+| Glyph | Spell | What it does |
+|---|---|---|
+| **Z** | **Lightning** | Instant hit, damage 3, **chains** to a second wisp within 2.2 units |
+| **^** (caret) | **Fireball** | Flies to the target point, damage 6 with a 1.5-unit blast radius |
+| **○** (circle) | **Shield** | 4 s bubble around the core that soaks one hit per wisp and burns 0.8 s per hit |
+
+- **Drawing too small?** Under 60 px of stroke length, or smaller than 14 % of the short side of the screen, the spell **fizzles** ("Draw it bigger") instead of misfiring — phone hands wobble, so this gate matters more than the recogniser itself.
+- **Score:** 10 points × combo per kill, combo grows by one per kill (cap ×6) and decays after 3.2 s of peace. Five hearts, a wave every time the field is clear, wisps get faster and tankier as the waves climb.
+- **Keyboard:** `H` help · `R` restart · `F` fullscreen · `P` performance mode · `Esc` close/back.
+- **No webcam?** "Try with mouse" plays the same game with the pointer — draw with the mouse/finger.
+- **On a phone** the same mobile profile applies (DPR 1.5, no `backdrop-filter`, capped render loop), the arena is capped at a 220-particle pool and every effect mesh is pooled or disposed, so the spell page is about as heavy as the shape page — not a second app.
+
+Recognition notes: the templates are rotation-*sensitive* on purpose (`V` and `^` must stay different glyphs), scoring uses the standard `0.5·√2·250` normalisation and a `0.66` acceptance threshold — below that the stroke is rejected rather than guessed. Measured in the automated suite: Z 92-96 %, caret 92-94 %, circle 89-90 %, flat scribbles rejected.
 
 ## Smoothness & performance notes
 
@@ -82,6 +106,12 @@ styles.css              glass UI, layers, responsive layout
 js/main.js              camera bootstrap, gesture state machine, input, overlay
 js/scene.js             three.js scene, shared geometry pool, shape lifecycle
 js/tracker.js           MediaPipe HandLandmarker, cached model download, camera
+spell.html              Spell Caster shell (same page chrome, second mode)
+spells.css              arena HUD: hearts, combo, spellbook pills, hurt vignette
+js/spell/main.js        HUD wiring, stroke capture, recognise → cast, pointer fallback
+js/spell/hands.js       hand → glyph stroke reader (pinch down/up, smoothing, size gate)
+js/spell/recognizer.js  $1 Unistroke recognizer + the three spell templates
+js/spell/game.js        three.js arena: core, wisps, bolts, fireballs, shield, particles
 sw.js                   service worker (cache-first CDN, stale-while-revalidate shell)
 manifest.webmanifest    installable PWA
 ```

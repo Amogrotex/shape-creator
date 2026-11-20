@@ -1,5 +1,5 @@
 // sw.js — make the second visit instant.
-const VERSION = 'v4';
+const VERSION = 'v6';
 const SHELL_CACHE = `sc-shell-${VERSION}`;
 const ASSET_CACHE = `sc-assets-${VERSION}`;
 
@@ -11,6 +11,12 @@ const SHELL = [
   './js/main.js',
   './js/scene.js',
   './js/tracker.js',
+  './spell.html',
+  './spells.css',
+  './js/spell/main.js',
+  './js/spell/game.js',
+  './js/spell/hands.js',
+  './js/spell/recognizer.js',
 ];
 
 // Big, immutable third-party payloads (three.js, MediaPipe wasm + hand model).
