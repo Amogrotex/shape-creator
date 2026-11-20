@@ -518,6 +518,12 @@ $('#btn-clear').addEventListener('click', () => {
   toast('Cleared');
 });
 
+$('#btn-cam').addEventListener('click', () => {
+  if (app.tracker) { toast('Camera is already on'); return; }
+  if (app.loading) { toast('Still starting…'); return; }
+  startWithCamera();
+});
+
 $('#btn-add').addEventListener('click', () => {
   const s = scene.spawn({ type: app.shapeType, nx: 0.5, ny: 0.5 });
   s.grow = 0.3;

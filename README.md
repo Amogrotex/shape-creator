@@ -6,6 +6,8 @@ A faster, lighter, rewritten take on the classic [Shape Creator demo](https://co
 
 **Live:** https://amogrotex.github.io/shape-creator/
 
+![Shape Creator preview](preview.png)
+
 ---
 
 ## What was wrong before
@@ -40,7 +42,7 @@ Roughly: **~45 % smaller payload on first load** (gzip/brotli CDN + 448 px input
 - **Delete** — drop a shape on the bin (bottom right).
 - No webcam? Drag with the mouse or your finger — same rules.
 
-Keyboard: `C` clear · `Space` add · `F` fullscreen · `D` diagnostics · `H` help · `Esc` close.
+Keyboard: `C` clear · `Space` add · `F` fullscreen · `D` diagnostics · `H` help · `Esc` close. The **Camera** button in the toolbar switches from mouse mode to hand tracking at any time.
 
 ## Run locally
 

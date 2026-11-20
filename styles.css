@@ -253,7 +253,8 @@ body.no-camera #webcam { opacity: 0; }
   background: var(--accent);
   box-shadow: 0 0 18px rgba(36, 240, 255, .4);
 }
-.ghost-btn { border-color: var(--line); font-size: 13px; }
+.ghost-btn { border-color: var(--line); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.ghost-btn[hidden] { display: none; }
 .ghost-btn.danger:hover { color: #fff; background: rgba(255, 77, 77, .22); border-color: rgba(255, 77, 77, .5); }
 
 /* ── overlays / cards ─────────────────────────────────────────── */
@@ -386,11 +387,19 @@ button.secondary:hover { background: rgba(255, 255, 255, .12); }
 /* ── small screens ───────────────────────────────────────────── */
 @media (max-width: 560px) {
   .brand-text { display: none; }
+  #btn-cam span { display: none; }
+  .ghost-btn { padding: 0 9px; }
+}
   #toolbar { gap: 6px; padding: 6px; }
   .seg button { min-width: 34px; padding: 0 8px; height: 36px; }
   #trash { width: 58px; height: 58px; bottom: max(84px, calc(env(safe-area-inset-bottom) + 84px)); }
   .card { padding: 22px 18px 18px; }
   .card h1 { font-size: 22px; }
+}
+
+@media (max-width: 430px) {
+  #btn-add { display: none; }
+  .seg { gap: 2px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
