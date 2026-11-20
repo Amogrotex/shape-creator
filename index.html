@@ -59,7 +59,16 @@
 
 <!-- optional debug readout -->
 <div id="perf" hidden>
-  <span id="perf-fps">0</span> fps · <span id="perf-inf">0</span> track/s · <span id="perf-shapes">0</span> shapes
+  <span id="perf-fps">0</span> fps · <span id="perf-inf">0</span> track/s · <span id="perf-shapes">0</span> shapes · dpr <span id="perf-dpr">1</span>
+</div>
+
+<!-- build-mode hint -->
+<div id="buildhint" hidden>
+  <span class="dot"></span>
+  <b>Build mode</b>
+  <span class="sep">·</span> twist your palm to rotate
+  <span class="sep">·</span> second open hand to resize
+  <span class="sep">·</span> pinch to place
 </div>
 
 <!-- trash -->
@@ -123,9 +132,9 @@
   <div class="card card--wide">
     <h2>How to play</h2>
     <ol class="steps">
-      <li><b>Create</b> — pinch both hands (thumb + index) close together, then pull them apart.</li>
-      <li><b>Resize</b> — while still pinching with both hands, change the distance between them.</li>
-      <li><b>Move</b> — pinch near a shape with one hand and drag it around.</li>
+      <li><b>Build mode</b> — open your whole hand: a ghost shape appears. Twist your palm to <b>rotate</b> it, open your other hand and move it apart to <b>resize</b>, then <b>pinch</b> to place it.</li>
+      <li><b>Quick create</b> — pinch both hands close together, then pull them apart (this also sets the size).</li>
+      <li><b>Move &amp; rotate</b> — pinch near a shape with one hand, drag it and twist your wrist; let go to fling a spin.</li>
       <li><b>Delete</b> — drag a shape onto the bin (bottom right) and let go of the pinch.</li>
     </ol>
     <p class="fineprint">Keys: <kbd>C</kbd> clear · <kbd>Space</kbd> add · <kbd>F</kbd> fullscreen · <kbd>D</kbd> diagnostics · <kbd>H</kbd> help</p>

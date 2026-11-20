@@ -1,5 +1,7 @@
-// tracker.js — camera + MediaPipe HandLandmarker (tasks-vision, GPU delegate).
-// Loaded lazily, cached in the Cache API, and fed downscaled frames so inference stays cheap.
+// tracker.js — camera + MediaPipe HandLandmarker (tasks-vision).
+// GPU delegate feeds the video element straight to the model (no canvas copy);
+// the CPU fallback downscales first. The model is streamed with progress and
+// cached in CacheStorage so the second visit starts instantly.
 
 export const VISION_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const WASM_PATH = `${VISION_BASE}/wasm`;
@@ -7,8 +9,8 @@ const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/hand_landmark
 const MODEL_BYTES_HINT = 7819105;
 const CACHE_NAME = 'shape-creator-assets-v2';
 
-/** Download the model with real progress, then keep it in CacheStorage for instant reloads. */
-async function fetchModel(url, onProgress) {
+/** Download the model with real progress, then keep it in CacheStorage. */
+async function fetchModel(url, onProgress = () => {}) {
   try {
     const cache = await caches.open(CACHE_NAME);
     const hit = await cache.match(url);
@@ -46,12 +48,24 @@ async function fetchModel(url, onProgress) {
     onProgress(1, { cached: false });
     return bytes;
   } catch (err) {
-    // Offline-ish fallback: plain fetch (browser HTTP cache still helps).
     const res = await fetch(url);
     if (!res.ok) throw err;
     const bytes = new Uint8Array(await res.arrayBuffer());
     onProgress(1, {});
     return bytes;
+  }
+}
+
+/** Warm the model cache in the background (skipped on save-data / 2G). */
+export async function preloadModel() {
+  const conn = navigator.connection;
+  if (conn?.saveData) return false;
+  if (conn?.effectiveType && /(^|-)2g$/.test(conn.effectiveType)) return false;
+  try {
+    await fetchModel(MODEL_URL);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -65,7 +79,7 @@ export async function startCamera(video, { width = 640, height = 480 } = {}) {
       facingMode: 'user',
       width: { ideal: width },
       height: { ideal: height },
-      frameRate: { ideal: 30, max: 30 },
+      frameRate: { ideal: 60, max: 60 },
     },
   });
   video.srcObject = stream;
@@ -86,7 +100,7 @@ export async function createTracker({ onProgress = () => {}, onStage = () => {},
   let modelAssetBuffer;
   try {
     modelAssetBuffer = await fetchModel(MODEL_URL, (p, meta) => onProgress(p, meta));
-  } catch (err) {
+  } catch {
     throw new Error('Could not download the hand model. Check your connection and reload.');
   }
 
@@ -97,20 +111,22 @@ export async function createTracker({ onProgress = () => {}, onStage = () => {},
     baseOptions: { modelAssetBuffer, delegate },
     runningMode: 'VIDEO',
     numHands: 2,
-    minHandDetectionConfidence: 0.55,
-    minHandPresenceConfidence: 0.55,
-    minTrackingConfidence: 0.55,
+    minHandDetectionConfidence: 0.5,
+    minHandPresenceConfidence: 0.5,
+    minTrackingConfidence: 0.5,
   });
 
   onStage('warmup');
   let landmarker;
+  let usingGPU = true;
   try {
     landmarker = await HandLandmarker.createFromOptions(fileset, options('GPU'));
   } catch {
+    usingGPU = false;
     landmarker = await HandLandmarker.createFromOptions(fileset, options('CPU'));
   }
 
-  // Downscale scratch canvas: the model needs ~256-512px, not 720p.
+  // CPU path only: downscale into a scratch canvas first.
   const work = document.createElement('canvas');
   const wctx = work.getContext('2d', { alpha: false, willReadFrequently: false });
   let lastVideoTime = -1;
@@ -118,18 +134,21 @@ export async function createTracker({ onProgress = () => {}, onStage = () => {},
 
   function setInputWidth(px) { inputWidth = px; }
 
-  /** Draw the current video frame into the small canvas and run inference on it. */
   function detect(video, timestamp) {
     if (!video.videoWidth || video.readyState < 2) return null;
-    if (video.currentTime === lastVideoTime) return null; // same frame → no need to re-run
+    if (video.currentTime === lastVideoTime) return null; // same frame → skip
     lastVideoTime = video.currentTime;
 
-    const w = inputWidth;
-    const h = Math.round((video.videoHeight / video.videoWidth) * w);
-    if (work.width !== w || work.height !== h) { work.width = w; work.height = h; }
-    wctx.drawImage(video, 0, 0, w, h);
+    let source = video;
+    if (!usingGPU) {
+      const w = inputWidth;
+      const h = Math.round((video.videoHeight / video.videoWidth) * w);
+      if (work.width !== w || work.height !== h) { work.width = w; work.height = h; }
+      wctx.drawImage(video, 0, 0, w, h);
+      source = work;
+    }
 
-    const result = landmarker.detectForVideo(work, timestamp);
+    const result = landmarker.detectForVideo(source, timestamp);
     detectCount++;
     return result;
   }
@@ -148,5 +167,5 @@ export async function createTracker({ onProgress = () => {}, onStage = () => {},
     try { landmarker.close(); } catch { /* noop */ }
   }
 
-  return { detect, stats, setInputWidth, dispose, modelAssetBuffer };
+  return { detect, stats, setInputWidth, dispose, modelAssetBuffer, get usingGPU() { return usingGPU; } };
 }

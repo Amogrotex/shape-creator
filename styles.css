@@ -165,6 +165,45 @@ body.no-camera #webcam { opacity: 0; }
 #loadpill .bar { width: 92px; height: 5px; margin: 0; }
 #loadtext { white-space: nowrap; max-width: 52vw; overflow: hidden; text-overflow: ellipsis; }
 
+/* ── build-mode hint ──────────────────────────────────────────── */
+#buildhint {
+  position: fixed;
+  z-index: 31;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 62px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: #eaf6ff;
+  background: linear-gradient(180deg, rgba(255, 47, 179, .22), rgba(14, 17, 26, .82));
+  border: 1px solid rgba(255, 47, 179, .45);
+  box-shadow: 0 0 26px rgba(255, 47, 179, .26), var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  white-space: nowrap;
+  animation: veilin .22s ease both;
+  pointer-events: none;
+}
+#buildhint[hidden] { display: none; }
+#buildhint .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 10px var(--accent-2);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+#buildhint b { color: #ffd7f1; letter-spacing: .2px; }
+#buildhint .sep { opacity: .45; }
+
+@keyframes pulse { 50% { opacity: .35; transform: scale(.75) } }
+
+.chip[data-state="build"] { color: #22001a; background: var(--accent-2); border-color: transparent; }
+
 /* ── debug readout ────────────────────────────────────────────── */
 #perf {
   position: fixed;
@@ -387,6 +426,8 @@ button.secondary:hover { background: rgba(255, 255, 255, .12); }
 /* ── small screens ───────────────────────────────────────────── */
 @media (max-width: 560px) {
   .brand-text { display: none; }
+  #buildhint { font-size: 11px; gap: 6px; padding: 7px 11px; max-width: calc(100vw - 24px); overflow: hidden; }
+  #buildhint .sep, #buildhint span:nth-of-type(3) { display: none; }
   #btn-cam span { display: none; }
   .ghost-btn { padding: 0 9px; }
 }
