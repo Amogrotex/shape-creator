@@ -100,7 +100,7 @@ export const TEMPLATES = {
   // ^ — fireball
   caret: polyline([0.12, 0.8], [0.5, 0.15], [0.88, 0.8]),
   // O — shield
-  circle: ellipse(),
+  circle: ellipse(0.5, 0.5, 0.38, 0.38),
 };
 
 export class Recognizer {
@@ -113,10 +113,31 @@ export class Recognizer {
   recognize(rawPoints) {
     const scores = {};
     if (!rawPoints || rawPoints.length < 4) return { name: null, score: 0, scores };
-    const points = normalize(rawPoints);
+
+    // Two cheap tolerances so real hands don't fizzle on a correct glyph:
+    //  · direction — a Z or a circle traced backwards is still the same spell
+    //  · start point — a closed loop can begin anywhere, so the stroke is
+    //    re-normalised from a few different starting indices and the best
+    //    alignment wins (translation is relative to the first point, hence the
+    //    re-normalise instead of shifting the normalised array).
+    // Rotation / flip invariance stays OFF: V must never read as ^, and a
+    // mirrored Z must not read as Z.
+    const variants = [rawPoints, [...rawPoints].reverse()];
+    const step = 2;                        // 64 resampled points → ~11° slices
+    const candidates = [];
+    for (const v of variants) {
+      for (let k = 0; k < v.length; k += step) {
+        candidates.push(normalize(k === 0 ? v : v.slice(k).concat(v.slice(0, k))));
+      }
+    }
+
     let best = { name: null, score: 0 };
     for (const t of this.templates) {
-      const score = 1 - pathDistance(points, t.points) / HALF_DIAGONAL;
+      let score = -1;
+      for (const cand of candidates) {
+        const s = 1 - pathDistance(cand, t.points) / HALF_DIAGONAL;
+        if (s > score) score = s;
+      }
       scores[t.name] = score;
       if (score > best.score) best = { name: t.name, score };
     }

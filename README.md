@@ -78,7 +78,9 @@ Your hand is the wand. **Draw a glyph in the air**, the stroke is resampled and 
 - **No webcam?** "Try with mouse" plays the same game with the pointer — draw with the mouse/finger.
 - **On a phone** the same mobile profile applies (DPR 1.5, no `backdrop-filter`, capped render loop), the arena is capped at a 220-particle pool and every effect mesh is pooled or disposed, so the spell page is about as heavy as the shape page — not a second app.
 
-Recognition notes: the templates are rotation-*sensitive* on purpose (`V` and `^` must stay different glyphs), scoring uses the standard `0.5·√2·250` normalisation and a `0.66` acceptance threshold — below that the stroke is rejected rather than guessed. Measured in the automated suite: Z 92-96 %, caret 92-94 %, circle 89-90 %, flat scribbles rejected.
+Recognition notes: the templates are rotation-*sensitive* on purpose (`V` and `^` must stay different glyphs), scoring uses the standard `0.5·√2·250` normalisation and a `0.66` acceptance threshold — below that the stroke is rejected rather than guessed. Two cheap tolerances keep real hands from fizzling: the stroke is also scored **backwards** (a Z or a circle traced the other way is the same spell) and **re-normalised from 32 different start points** (a closed loop can begin anywhere — without that a circle started at the side scored 51 %, with it 88-96 %). Measured: Z 91-93 %, caret 92-100 %, circle 84-96 %; flat lines 29 %, `V` 56 %, checkmarks 57 % → all rejected.
+
+The arena also adapts to portrait phones: the camera pulls back so the play field keeps a minimum width instead of blowing every mesh up across a 390 px screen.
 
 ## Smoothness & performance notes
 

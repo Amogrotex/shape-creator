@@ -18,8 +18,8 @@ export function createGame(root, { onEvent = () => {} } = {}) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 60);
-  const CAM_Z = 6.6;
-  camera.position.set(0, 0, CAM_Z);
+  let camZ = 6.6;
+  camera.position.set(0, 0, camZ);
 
   let width = 1, height = 1;
   let planeW = 10, planeH = 6;
@@ -161,10 +161,15 @@ export function createGame(root, { onEvent = () => {} } = {}) {
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    // portrait phones are narrow: pull the camera back so the arena keeps a
+    // minimum width instead of scaling every object up to fill 390 px
     const vFov = (camera.fov * Math.PI) / 180;
-    planeH = 2 * Math.tan(vFov / 2) * CAM_Z;
+    const tanHalf = Math.tan(vFov / 2);
+    camZ = Math.max(6.16 / (2 * tanHalf), (5.4 / camera.aspect) / (2 * tanHalf));
+    camera.position.z = camZ;
+    planeH = 2 * tanHalf * camZ;
     planeW = planeH * camera.aspect;
-    core.position.set(0, -planeH * 0.11, 0);
+    core.position.set(0, -Math.min(planeH * 0.11, planeW * 0.3), 0);
   }
 
   function setQuality(mode) {
@@ -191,7 +196,7 @@ export function createGame(root, { onEvent = () => {} } = {}) {
     group.scale.setScalar(scale);
 
     const angle = Math.random() * Math.PI * 2;
-    const rx = planeW * 0.46, ry = planeH * 0.4;
+    const rx = planeW * 0.46, ry = Math.min(planeH * 0.42, planeW * 0.95);
     group.position.set(core.position.x + Math.cos(angle) * rx, core.position.y + Math.sin(angle) * ry, 0);
     scene.add(group);
 

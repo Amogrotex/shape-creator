@@ -188,6 +188,7 @@ function penUp() {
   G.penDown = false;
   const pts = G.stroke;
   G.stroke = [];
+  G.lastStroke = pts;               // handy for debugging / the test suite
   if (pts.length < 5) return;
 
   // reject tiny scribbles: they would only annoy the recogniser
