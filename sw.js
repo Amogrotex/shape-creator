@@ -1,5 +1,5 @@
 // sw.js — make the second visit instant.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL_CACHE = `sc-shell-${VERSION}`;
 const ASSET_CACHE = `sc-assets-${VERSION}`;
 

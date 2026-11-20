@@ -22,7 +22,26 @@ const toastEl = $('#toast');
 const perfEl = $('#perf');
 const buildHint = $('#buildhint');
 
-const scene = createScene($('#three-root'));
+// Coarse pointer / phone-sized screens get a lighter profile from the start.
+const isMobile = (() => {
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches;
+  const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const small = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) < 820;
+  return !!(coarse || ua || small);
+})();
+
+const Q = {
+  mobile: {
+    max:  { detect: [1000 / 30, 1000 / 24, 1000 / 18], input: 320, render: 1000 / 60 },
+    low:  { detect: [1000 / 24, 1000 / 20, 1000 / 15], input: 256, render: 1000 / 45 },
+  },
+  desktop: {
+    max:  { detect: [1000 / 60, 1000 / 30, 1000 / 22], input: 448, render: 1000 / 60 },
+    low:  { detect: [1000 / 30, 1000 / 24, 1000 / 18], input: 320, render: 1000 / 60 },
+  },
+};
+const storedPerf = localStorage.getItem('sc-perf') === '1';
+const scene = createScene($('#three-root'), { mobile: isMobile });
 
 // ── tunables ────────────────────────────────────────────────────
 const INTERVAL = { fast: 1000 / 60, normal: 1000 / 30, slow: 1000 / 22 };
@@ -34,7 +53,7 @@ const FIST = 1.18;          // below this the hand is closed → confirm build
 const CREATE_GAP = 0.11;    // both pinch points this close (fraction of min viewport side)
 const GRAB_RADIUS = 1.5;    // world units
 const BUILD_DWELL = 110;    // ms an open palm must hold before build mode starts
-const EXTRAPOLATE = 0.05;   // max seconds to look ahead
+const EXTRAPOLATE = 0.07;   // hard cap on the velocity look-ahead (seconds)
 
 // ── One Euro filter (adaptive low-pass: fast when moving, smooth when still) ──
 const alphaOf = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
@@ -77,7 +96,13 @@ const app = {
   lastDetect: 0,
   detectInterval: INTERVAL.normal,
   qualityAt: 0,
+  perfMode: storedPerf,
+  lastRender: 0,
 };
+
+function profile() {
+  return (isMobile ? Q.mobile : Q.desktop)[app.perfMode ? 'low' : 'max'];
+}
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
@@ -145,7 +170,8 @@ const HAND_EDGES = [
 ];
 
 function sizeOverlay() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+  const cap = app.perfMode ? 1 : isMobile ? 1 : 1.25;
+  const dpr = Math.min(window.devicePixelRatio || 1, cap);
   overlay.width = Math.round(window.innerWidth * dpr);
   overlay.height = Math.round(window.innerHeight * dpr);
   octx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -312,7 +338,9 @@ function updateHands(now) {
     if (now - st.tLast > 220) return;
 
     const span = Math.max(0.004, (st.tCur - st.tPrev) / 1000);
-    const ahead = Math.min(Math.max(now - st.tCur, 0) / 1000, EXTRAPOLATE) * 0.55;
+    // bridge up to ~1.2 inference intervals, never more than 70 ms
+    const maxAhead = Math.min(EXTRAPOLATE, (app.detectInterval / 1000) * 1.2);
+    const ahead = Math.min(Math.max(now - st.tCur, 0) / 1000, maxAhead) * 0.6;
     const f = ahead / span;
     const out = st.out;
     for (let k = 0; k < 42; k++) {
@@ -434,6 +462,7 @@ function startBuild(hand) {
   };
   app.armedBuild = false;
   buildHint.hidden = false;
+  document.body.classList.add('building');
   setStatus('build', 'build');
 }
 
@@ -482,6 +511,7 @@ function commitBuild() {
   app.build = null;
   app.armedBuild = false;
   buildHint.hidden = true;
+  document.body.classList.remove('building');
   setStatus('live', 'live');
   toast('Shape placed — open your palm for the next one');
 }
@@ -492,6 +522,7 @@ function cancelBuild() {
   scene.remove(b.ghost, false);
   app.build = null;
   buildHint.hidden = true;
+  document.body.classList.remove('building');
   setStatus('live', 'live');
 }
 
@@ -627,6 +658,11 @@ let qualityAt = 0;
 
 function loop(now) {
   requestAnimationFrame(loop);
+
+  // 120 Hz phones: rendering twice per 60 Hz step is wasted heat.
+  if (now - app.lastRender < profile().render - 1.5) return;
+  app.lastRender = now;
+
   const dtRaw = (now - lastFrame) / 1000;
   lastFrame = now;
   const dt = clamp(dtRaw || 0.016, 0.001, 0.05);
@@ -641,12 +677,13 @@ function loop(now) {
     updateHands(now);
     handleGestures(now);
 
-    if (now - qualityAt > 1200) {
+    if (now - qualityAt > 900) {
       qualityAt = now;
-      scene.autoQuality(app.frameAvg);
-      app.detectInterval = app.frameAvg > 26 ? INTERVAL.slow
-        : app.frameAvg > 17 ? INTERVAL.normal
-          : INTERVAL.fast;
+      if (!app.perfMode) scene.autoQuality(app.frameAvg);
+      const [fast, normal, slow] = profile().detect;
+      app.detectInterval = app.frameAvg > 26 ? slow
+        : app.frameAvg > 17 ? normal
+          : fast;
     }
   }
 
@@ -662,8 +699,24 @@ function loop(now) {
     $('#perf-inf').textContent = Math.round(infRate);
     $('#perf-shapes').textContent = scene.shapes().filter((s) => !s.ghost).length;
     $('#perf-dpr').textContent = scene.dpr.toFixed(2);
+    $('#perf-prof').textContent = `${isMobile ? 'mobile' : 'desktop'}/${app.perfMode ? 'low' : 'max'}`;
   }
 }
+
+function applyPerfMode() {
+  scene.setQualityMode(app.perfMode ? 'low' : 'auto');
+  sizeOverlay();
+  app.tracker?.setInputWidth(profile().input);
+  $('#btn-perf').classList.toggle('on', app.perfMode);
+  $('#btn-perf').title = app.perfMode ? 'Performance mode: on (smoother)' : 'Performance mode: off';
+  localStorage.setItem('sc-perf', app.perfMode ? '1' : '0');
+  if (app.mode !== 'idle') toast(app.perfMode ? 'Performance mode on' : 'Quality mode on');
+}
+
+$('#btn-perf').addEventListener('click', () => {
+  app.perfMode = !app.perfMode;
+  applyPerfMode();
+});
 
 // ── boot / camera ───────────────────────────────────────────────
 function hideVeil() { veil.hidden = true; }
@@ -692,7 +745,7 @@ async function startWithCamera() {
   let tracker = null;
   try {
     // 1. Camera first — instant feedback.
-    await startCamera(video);
+    await startCamera(video, isMobile ? { width: 480, height: 360, fps: 30 } : { width: 640, height: 480, fps: 60 });
     app.mode = 'cam';
     document.body.classList.remove('no-camera');
     hideVeil();
@@ -701,6 +754,7 @@ async function startWithCamera() {
     // 2. Then the hand model, with real progress.
     showLoadPill('Preparing hand model — 0%');
     tracker = await createTracker({
+      inputWidth: profile().input,
       onProgress: (p, meta) => {
         if (p >= 1) {
           showLoadPill(meta?.cached ? 'Hand model ready (cached)' : 'Hand model ready');
@@ -812,6 +866,7 @@ window.addEventListener('keydown', (e) => {
   else if (k === 'f') $('#btn-full').click();
   else if (k === 'h') (help.hidden ? openHelp() : closeHelp());
   else if (k === 'd') { app.debug = !app.debug; perfEl.hidden = !app.debug; }
+  else if (k === 'p') $('#btn-perf').click();
   else if (k === 'escape') closeHelp();
 });
 
@@ -825,6 +880,7 @@ window.addEventListener('resize', () => {
 sizeOverlay();
 refreshTrashRect();
 setTimeout(refreshTrashRect, 400);
+applyPerfMode();
 requestAnimationFrame(loop);
 
 // small debug hook (handy in the console, harmless in production)

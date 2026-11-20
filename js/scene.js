@@ -14,11 +14,14 @@ const easeOutBack = (t) => {
 const easeInCubic = (t) => t * t * t;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-export function createScene(root) {
+export function createScene(root, { mobile = false } = {}) {
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
-    antialias: window.devicePixelRatio < 2,
+    antialias: !mobile && window.devicePixelRatio < 2,
     powerPreference: 'high-performance',
+    stencil: false,
+    depth: true,
+    preserveDrawingBuffer: false,
   });
   renderer.setClearAlpha(0);
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%';
@@ -47,7 +50,8 @@ export function createScene(root) {
   let width = 1, height = 1;
   let clock = 0;
 
-  const maxDPR = Math.min(window.devicePixelRatio || 1, 2);
+  let dprCap = mobile ? 1.5 : 2;
+  let maxDPR = Math.min(window.devicePixelRatio || 1, dprCap);
   let dpr = maxDPR;
 
   function nextColor() {
@@ -69,6 +73,15 @@ export function createScene(root) {
   }
 
   /** Drop render resolution when the GPU can't keep up; restore it when it can. */
+  /** Switch between auto / forced-low quality at runtime. */
+  function setQualityMode(mode) {
+    dprCap = mode === 'low' ? 1 : (mobile ? 1.5 : 2);
+    maxDPR = Math.min(window.devicePixelRatio || 1, dprCap);
+    dpr = Math.min(dpr, maxDPR);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(width, height, false);
+  }
+
   function autoQuality(frameMs) {
     let next = dpr;
     if (frameMs > 30) next = Math.max(1, dpr - 0.25);
@@ -250,7 +263,7 @@ export function createScene(root) {
   return {
     renderer, scene, camera,
     shapes: () => shapes,
-    resize, autoQuality, screenToWorld, worldToScreen,
+    resize, autoQuality, setQualityMode, screenToWorld, worldToScreen,
     spawn, remove, clear, commitGhost,
     setHighlight, setRotation, getRotation, nearest, update, render, CAM_Z,
     get dpr() { return dpr; },

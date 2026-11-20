@@ -37,6 +37,10 @@ The original ran the **legacy `@mediapipe/hands`** solution: 1280×720 frames pu
 | UI | none | onboarding card, live status chip, help sheet, shape picker, keyboard shortcuts, diagnostics (`D`) |
 | Errors | silent black screen | explicit camera-permission / download errors with a "try without camera" path |
 
+| Phone profile | same settings as desktop | **auto-detected**: DPR 1.5, no CSS filter on the video, no `backdrop-filter` blur, 60 fps render cap, lighter inference rate and a 320 px CPU input |
+| Manual override | — | **⚡ Performance mode** in the top bar (or `P`): DPR 1, smaller model input, 24 fps inference |
+| Render loop | one rAF callback = one render | **capped at 60 fps**, so 120 Hz phones do half the work instead of doubling the heat |
+
 Roughly: **~45 % smaller payload on first load** (gzip/brotli CDN + 448 px input), far less CPU per frame, and a first visit that shows something useful in under a second.
 
 ## Gestures
@@ -83,6 +87,17 @@ manifest.webmanifest    installable PWA
 ```
 
 Everything is a plain ES module — no build step, no dependencies in the repo.
+
+## On a phone
+
+Phones were the hardest case, and most of the lag was **not** the hand tracking at all — it was the browser compositing the page:
+
+- a CSS `filter` on the full-screen `<video>` forces a per-frame GPU pass, and
+- `backdrop-filter: blur()` on every HUD panel re-blurs a region that changes every frame.
+
+Both are switched off on coarse-pointer / narrow screens, which alone is often a double-digit fps gain. On top of that the mobile profile lowers the pixel ratio to 1.5, caps rendering at 60 fps (ProMotion screens were rendering at 120), runs inference at 30/24/18 fps depending on headroom, and keeps the CPU fallback input at 320 px.
+
+If your device still struggles, tap **⚡** (or press `P`): pixel ratio 1, 256 px input, 24 fps inference. The choice is remembered.
 
 ## Privacy
 

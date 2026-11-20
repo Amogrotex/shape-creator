@@ -69,7 +69,7 @@ export async function preloadModel() {
   }
 }
 
-export async function startCamera(video, { width = 640, height = 480 } = {}) {
+export async function startCamera(video, { width = 640, height = 480, fps = 30 } = {}) {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error('This browser has no camera API (needs https or localhost).');
   }
@@ -79,7 +79,7 @@ export async function startCamera(video, { width = 640, height = 480 } = {}) {
       facingMode: 'user',
       width: { ideal: width },
       height: { ideal: height },
-      frameRate: { ideal: 60, max: 60 },
+      frameRate: { ideal: fps, max: fps },
     },
   });
   video.srcObject = stream;

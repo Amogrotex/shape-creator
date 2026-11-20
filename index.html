@@ -42,6 +42,9 @@
   </div>
 
   <div class="hud-actions">
+    <button id="btn-perf" class="icon-btn" type="button" title="Performance mode: off" aria-label="Performance mode">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.2H11l-1 8.8 8.5-11.4H12z"/></svg>
+    </button>
     <button id="btn-help" class="icon-btn" type="button" title="How to play (H)" aria-label="How to play">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.6v.3"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></svg>
     </button>
@@ -59,16 +62,15 @@
 
 <!-- optional debug readout -->
 <div id="perf" hidden>
-  <span id="perf-fps">0</span> fps · <span id="perf-inf">0</span> track/s · <span id="perf-shapes">0</span> shapes · dpr <span id="perf-dpr">1</span>
+  <span id="perf-fps">0</span> fps · <span id="perf-inf">0</span> track/s · <span id="perf-shapes">0</span> shapes · dpr <span id="perf-dpr">1</span> · <span id="perf-prof">desktop</span>
 </div>
 
 <!-- build-mode hint -->
 <div id="buildhint" hidden>
   <span class="dot"></span>
   <b>Build mode</b>
-  <span class="sep">·</span> twist your palm to rotate
-  <span class="sep">·</span> second open hand to resize
-  <span class="sep">·</span> pinch to place
+  <span class="full"><span class="sep">·</span> twist your palm to rotate <span class="sep">·</span> second open hand to resize <span class="sep">·</span> pinch to place</span>
+  <span class="short"><span class="sep">·</span> pinch to place</span>
 </div>
 
 <!-- trash -->
@@ -137,7 +139,7 @@
       <li><b>Move &amp; rotate</b> — pinch near a shape with one hand, drag it and twist your wrist; let go to fling a spin.</li>
       <li><b>Delete</b> — drag a shape onto the bin (bottom right) and let go of the pinch.</li>
     </ol>
-    <p class="fineprint">Keys: <kbd>C</kbd> clear · <kbd>Space</kbd> add · <kbd>F</kbd> fullscreen · <kbd>D</kbd> diagnostics · <kbd>H</kbd> help</p>
+    <p class="fineprint">Keys: <kbd>C</kbd> clear · <kbd>Space</kbd> add · <kbd>F</kbd> fullscreen · <kbd>P</kbd> performance mode · <kbd>D</kbd> diagnostics · <kbd>H</kbd> help</p>
     <p class="fineprint">No webcam? Drag with the mouse / your finger — same rules apply.</p>
     <button id="btn-help-close" class="primary" type="button">Got it</button>
   </div>
